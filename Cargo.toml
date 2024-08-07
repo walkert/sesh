@@ -1,0 +1,10 @@
+[package]
+name = "sesh"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+expanduser = "1.2.2"
+jwalk = "0.8.1"
+skim = "0.10.4"
+tmux_interface = "0.3.2"
