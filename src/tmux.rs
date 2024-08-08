@@ -1,8 +1,8 @@
+use anyhow::Result;
 use std::path::PathBuf;
 
-use tmux_interface::{ListSessions, NewSession, SwitchClient, Tmux};
+use tmux_interface::{HasSession, ListSessions, NewSession, StdIO, SwitchClient, Tmux};
 
-//pub fn get_sessions() -> Vec<String> {
 pub fn get_sessions() -> Vec<String> {
     let mut sessions: Vec<String> = Vec::new();
     let output = Tmux::with_command(ListSessions::new()).output().unwrap();
@@ -17,12 +17,21 @@ pub fn get_sessions() -> Vec<String> {
     sessions
 }
 
-pub fn switch_client(name: &str) {
-    let _ = Tmux::with_command(SwitchClient::new().target_session(name)).status();
+pub fn switch_client(name: &str) -> Result<()> {
+    let _ = Tmux::with_command(SwitchClient::new().target_session(name)).status()?;
+    Ok(())
 }
 
-pub fn create_session(name: &str, start_path: PathBuf) {
-    //println!("Creating session {} with path {:?}", name, start_path);
+pub fn create_session(name: &str, start_path: PathBuf) -> Result<()> {
+    // If it exists, switch to it
+    let has_session = Tmux::with_command(HasSession::new().target_session(name))
+        .stdout(Some(StdIO::Null))
+        .stderr(Some(StdIO::Null))
+        .status()?;
+    if has_session.success() {
+        let _ = switch_client(name)?;
+    }
+    // Otherwise, create and switch
     Tmux::new()
         .add_command(
             NewSession::new()
@@ -30,7 +39,7 @@ pub fn create_session(name: &str, start_path: PathBuf) {
                 .session_name(name)
                 .start_directory(start_path.to_string_lossy()),
         )
-        .output()
-        .unwrap();
-    let _ = Tmux::with_command(SwitchClient::new().target_session(name)).status();
+        .output()?;
+    let _ = switch_client(name)?;
+    Ok(())
 }
